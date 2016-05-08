@@ -1,0 +1,5 @@
+Fichier texte externe : Tapez ici tout le texte dont vous avez envie pour vous entrainer. Evitez
+juste les accents qui ne seront pas pris en compte et seront remplaces, comme le reste de la
+ponctuation, par un espace. Gardez aussi a l'esprit que le texte apparaitra par lignes de
+trente cinq caracteres maximum (les espaces redondants, comme par exemple une virgule suivie d'un
+espace, seront remplaces par de simples espaces).
