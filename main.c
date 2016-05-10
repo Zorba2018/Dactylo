@@ -814,7 +814,7 @@ void init_alphabet(void)
 		for (cmpt2 = 0; cmpt2 < 256; cmpt2++)
 		{
 			ascii = getc(fichier);
-			if (ascii < '0' || ascii > '9')
+			while (ascii < '0' || ascii > '9')
 				ascii = getc(fichier);
 			switch (ascii)
 			{
