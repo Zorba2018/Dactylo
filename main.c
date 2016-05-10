@@ -805,8 +805,7 @@ void init_alphabet(void)
 {
 	int cmpt, cmpt2, ascii;
 	unsigned char val;
-	char nom[6] =
-	{ 'A', '.', 'l', 'e', 't', '\0' };
+	char nom[6] = "A.let";
 	FILE *fichier;
 	for (cmpt = 'A'; cmpt <= 'Z'; cmpt++)
 	{
