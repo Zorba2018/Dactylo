@@ -10,6 +10,8 @@ if (C99_SUPPORTED)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 endif()
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=500")
+
 set( CMAKE_C_FLAGS_DEBUG   " -ggdb3" )
 
 #Déclaration de l'exécutable
@@ -25,4 +27,10 @@ if (GLUT_FOUND)
   include_directories(${GLUT_INCLUDE_DIR})
   target_link_libraries (Dactylo ${GLUT_LIBRARIES})
 endif (GLUT_FOUND)
+
+find_package(OpenAL REQUIRED)
+if (OPENAL_FOUND)
+  include_directories(${OPENAL_INCLUDE_DIR})
+  target_link_libraries (Dactylo ${OPENAL_LIBRARY} "-lalut")
+endif (OPENAL_FOUND)
 

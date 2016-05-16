@@ -1,12 +1,13 @@
 #include<GL/glut.h>
 #include<stdio.h>
+#include<unistd.h>
 #include<string.h>
 #include<stdlib.h>
 #include<time.h>
 #include<math.h>
-#ifdef FMOD
-#include"fmod.h"
-#endif
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <AL/alut.h>
 
 GLubyte Texture[27][1024];
 char liste_touches[27] =
@@ -22,10 +23,17 @@ GLuint Texts[27], couleur_texte[3][36][3] =
 { 0, 0, 1 };
 int appui_touche = 0, demande = 1, mode = 0, son = 0, affichage = 1, son_lance =
 		0, SoundChannel = 0, file_end = 0, offset_ouverture = 0;
+
+
+
 FILE *fichier_entree;
-#ifdef FMOD
-FSOUND_SAMPLE *pSound;
-#endif
+ALCdevice *device;
+ALCcontext *context;
+ALuint buffer, source;
+ALenum format;
+ALvoid *data;
+ALsizei size, freq;
+ALboolean loop = AL_FALSE;
 char affichage_texte[50], texte_demande[3][36];
 clock_t temps1, temps2;
 int position_texte_actuel = 0, numero_texte_actuel = 0;
@@ -49,10 +57,8 @@ void dessiner_paumes(float x, float y, float z, int sens);
 void dessiner_doigts(float p1[3], float p2[3], float p3[3], float p4[3],
 		int numero, int sens);
 void dessiner_pouce(float p1[3], float p2[3], float p3[3], int sens);
-#ifdef FMOD
 int son_lettre(unsigned char key);
 void init_son();
-#endif
 void Afficher_curseur(int x, int y);
 void Cacher_curseur(int x, int y);
 
@@ -80,50 +86,52 @@ void save_config()
 	}
 }
 
-#ifdef FMOD
-
 void init_son()
-{	if (FSOUND_GetVersion() < FMOD_VERSION)
-	{
-		// Display the error message that shows we need the correct version
-		printf("Error : You are using the wrong DLL version!  You should be using FMOD %.02f\n", FMOD_VERSION);
-
-		// Quit the program
-		exit(1);
-	}
-	if (!FSOUND_Init(44100, 32, FSOUND_INIT_GLOBALFOCUS))
-	{
-		// If we couldn't initialize the sound system we print out the error
-		printf("%s\n", FMOD_ErrorString(FSOUND_GetError()));
-
-		// Quit the program
-		exit(1);
-	}
+{
+   const ALCchar *device_name = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+   device = alcOpenDevice(device_name);
+   if (!device)
+   {
+      fprintf(stderr, "unable to open default device\n");
+      return;
+   }
+   context = alcCreateContext(device, NULL);
+   if (!alcMakeContextCurrent(context))
+   {
+      fprintf(stderr, "failed to make default context\n");
+      return;
+   }
+   alGenSources((ALuint)1, &source);
 }
 
 int son_lettre(unsigned char key)
-{	char SONG_NAME[32]=
-	{	'A','.','w','a','v','\0'};
-	if(key!=' ')
-	SONG_NAME[0]=key;
-	else
-	SONG_NAME[0]='_';
-	if(son_lance)
-	return 0;
-	pSound = FSOUND_Sample_Load(FSOUND_FREE,SONG_NAME,0,0);
-	if (!pSound)
-	{
-		// Print the error message to the screen
-		printf("%s\n", FMOD_ErrorString(FSOUND_GetError()));
-
-		// Quit the program
-		exit(1);
-	}
-	SoundChannel = FSOUND_PlaySound(FSOUND_FREE,pSound);
-	son_lance=1;
+{
+   ALint source_state;
+   char SONG_NAME[6]=
+   { 'A', '.', 'w', 'a', 'v', '\0'};
+   if(key!=' ')
+      SONG_NAME[0]=key;
+   else
+      SONG_NAME[0]='_';
+   if(son_lance)
+      return 0;
+   
+   fprintf(stderr, "loading %s\n", SONG_NAME);
+   alutLoadWAVFile(SONG_NAME, &format, &data, &size, &freq, &loop);
+   alGenBuffers(1, &buffer);
+   alBufferData(buffer, format, data, size, freq);
+   alSourcei(source, AL_BUFFER, buffer);
+   alSourcePlay(source);
+   alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+   while (source_state == AL_PLAYING)
+   {
+      usleep(10000);
+      alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+   }
+   alDeleteBuffers(1, &buffer);
+   son_lance=1;
 }
 
-#endif
 
 void dessiner_mains(unsigned char key)
 {
@@ -852,10 +860,13 @@ void Reshape(int width, int height)
 
 void sortir()
 {
-#ifdef FMOD
-	FSOUND_Close();
-#endif
-	exit(0);
+   alDeleteSources(1, &source);
+   alDeleteBuffers(1, &buffer);
+   device = alcGetContextsDevice(context);
+   alcMakeContextCurrent(NULL);
+   alcDestroyContext(context);
+   alcCloseDevice(device);
+   exit(0);
 }
 
 void menuPrincipal(int value)
@@ -1086,10 +1097,8 @@ void Draw()
 		{
 			glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, MatSpec_touches_4);
 			touche_frappee = liste_touches[cmpt];
-#ifdef FMOD
 			if(son)
 			son_lettre(liste_touches[cmpt]);
-#endif
 		}
 		if ((positions_y[0][liste_touches[cmpt] - 'A'] == -1)
 				&& (positions_y[1][liste_touches[cmpt] - 'A'] != 1))
@@ -1110,10 +1119,8 @@ void Draw()
 	{
 		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, MatSpec_touches_4);
 		touche_frappee = ' ';
-#ifdef FMOD
 		if(son)
 		son_lettre(' ');
-#endif
 	}
 	if ((positions_y[0][26] == -1) && (positions_y[1][26] != 1))
 	{
@@ -1155,12 +1162,10 @@ void idle()
 {
 	int ascii, ref, ref2, ref3;
 	temps2 = clock();
-#ifdef FMOD
-	if(son_lance && !FSOUND_GetChannelsPlaying())
-	{	FSOUND_StopSound(SoundChannel);
+	if(son_lance)// && !FSOUND_GetChannelsPlaying())
+	{//	FSOUND_StopSound(SoundChannel);
 		son_lance=0;
 	}
-#endif
 	if (strcmp(affichage_texte, "") && (temps2 - temps1) >= 0.5 * CLOCKS_PER_SEC)
 		strcpy(affichage_texte, "");
 	if (demande)
@@ -1704,9 +1709,7 @@ int main(int argc, char *argv[])
 	texte_demande[1][0] = '\0';
 	texte_demande[2][0] = '\0';
 	init_alphabet();
-#ifdef FMOD
 	init_son();
-#endif
 	init_config();
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
