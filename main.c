@@ -120,6 +120,7 @@ int son_lettre(unsigned char key)
    alutLoadWAVFile(SONG_NAME, &format, &data, &size, &freq, &loop);
    alGenBuffers(1, &buffer);
    alBufferData(buffer, format, data, size, freq);
+   alutUnloadWAV(format, data, size, freq);
    alSourcei(source, AL_BUFFER, buffer);
    alSourcePlay(source);
    alGetSourcei(source, AL_SOURCE_STATE, &source_state);
